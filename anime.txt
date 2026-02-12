@@ -1,0 +1,22 @@
++ Job ai-image-pipeline-anime in region asia-northeast1
+Executed 4 times
+Last executed 2025-12-08T04:56:14.601081Z with execution ai-image-pipeline-anime-j8r6k
+Last updated on 2025-12-08T04:51:49.376263Z by keiforworks@gmail.com
+ 
+Tasks:               1
+Parallelism:         No limit
+Container None
+  Image:             gcr.io/ai-content-pipeline-475505/ai-image-pipeline:anime
+  Args:              batch
+  Memory:            2Gi
+  CPU:               1
+  Secrets:
+    /secrets/creds   google-credentials:latest
+    /secrets/token   google-token:latest
+    ANTHROPIC_API_KEY ANTHROPIC_API_KEY:latest
+    DISCORD_GAS_WEBHOOK_URL DISCORD_GAS_WEBHOOK_URL:latest
+    GDRIVE_PARENT_FOLDER_ID GDRIVE_PARENT_FOLDER_ID:latest
+    OPENAI_API_KEY   OPENAI_API_KEY:latest
+Task Timeout:        1d
+Max Retries:         0
+Service account:     185523304631-compute@developer.gserviceaccount.com

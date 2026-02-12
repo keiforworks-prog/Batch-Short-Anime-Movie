@@ -1,0 +1,11 @@
+
+--- AI画像自動生成パイプライン ---
+📂 台本フォルダ: C:\Users\keifo\Documents\00API\Claude Image\pipeline_files\input
+
+--- 📖 キャンバスリスト (台本) ---
+  [1] base_prompt.txt
+  [2] test_project.txt
+  [3] 【海外の反応】突如ノーベル賞を受賞した日本人！？その驚きの発見と美しい日本人の人間性とは！？.txt
+  [4] 江戸っ子.txt
+
+▶️  実行したいキャンバスの番号を入力してください (半角数字): ^C

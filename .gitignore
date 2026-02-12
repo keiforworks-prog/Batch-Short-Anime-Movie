@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# 環境変数・認証情報
+.env
+*.json
+!requirements.txt
+credentials.json
+token.json
+
+# 出力ファイル
+output/
+scripts/output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Google Cloud
+.gcloudignore
+
+# ログ
+*.log
+logs/
+
+# テスト
+.pytest_cache/
+.coverage
+htmlcov/

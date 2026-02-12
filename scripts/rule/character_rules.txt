@@ -1,0 +1,63 @@
+✅ 登場人物設定の基本ルール
+国籍・人種：毎回必ず明記（例：白人女性、日本人男性など）
+
+年齢：具体的に明記（例：28歳、45歳）。曖昧な表現（例：20代、初老）は禁止
+
+服装・髪型：
+
+色、素材、組み合わせ、インナー、靴まで含めて明確に記述
+
+髪色・髪型も毎回必ず明記する
+
+台本に明記されている場合は台本に従う。未指定の場合はAIが具体的に決定する
+
+一貫性：同一人物であれば、物語を通して設定を統一・継続させること
+
+✅ キャラクターの多様化ルール（最重要）
+外見の重複回避: 登場人物たちの服装や髪型が似通らないように、常にバリエーションを持たせること。
+
+類似キャラクターへの対応: もし似たような設定の人物が2人いる場合は、片方にメガネをかけさせるなど、明確な識別点を持たせること。
+
+✅ 日本人顔立ちの標準パターン
+日本人男性（成人）:
+Japanese man with typical Japanese facial features, oval face shape, medium-width eyes with natural double eyelids, defined but gentle jawline, straight black hair, warm medium skin tone, natural Japanese bone structure
+
+日本人女性（成人）:
+Japanese woman with soft oval face, gentle almond-shaped eyes, small nose bridge, straight dark hair, natural Japanese bone structure, warm medium skin tone, authentic Japanese appearance
+
+✅ 軍事・公的機関の正確な描写ルール
+海上自衛隊:
+
+制服: white dress uniform（白色礼服）を基本とする。潜水艦内では dark blue work uniform。
+
+旗章: JMSDF rising sun ensign with 16 rays（旭日旗・16条光線）を使用する。
+
+アメリカ海軍:
+
+制服: white US Navy uniform を使用する。
+
+アメリカ軍単独シーンの必須記載: "exclusively American officers", "no Japanese personnel present", "caucasian facial features" をプロンプトに含める。
+
+国会シーン:
+
+採決: 起立採決、電子投票、記名投票のいずれかで表現する（手を挙げる投票は禁止）。
+
+可決後: 拍手、または重要法案の場合は万歳三唱で表現する。
+
+攻撃シーン:
+
+迫力強化: 「RPG launcher」「muzzle flash」「smoke trail」といった具体的な武器やエフェクトを描写する。
+
+✅ 海上自衛隊掃海艇の描写ルール
+掃海艇（木製船体）:
+
+完成した掃海艇の外観:
+- 外観は通常の現代軍艦と同じグレー塗装
+- 木製構造は外からは見えない
+- 「wooden hull」ではなく「minesweeper with standard naval gray paint」と記述
+- 内部シーンでも木の質感は見せない（塗装・内装済み）
+
+製造工程・造船所シーン:
+- 木製フレーム、木材の質感を積極的に描写してOK
+- 職人が木材を加工するシーン、木の骨組みなどはリアルに表現
+- 「wooden frame construction」「timber shipbuilding」などを使用

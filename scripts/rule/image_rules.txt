@@ -1,0 +1,152 @@
+✅ 基本設定
+質感：高品質なアニメーション風（high-quality anime style, detailed animation aesthetic）
+出力形式：プロンプトのみ（説明・背景不要）
+
+✅ 出力形式の厳守（CRITICAL - 最重要）
+
+【絶対禁止】以下を絶対に出力してはいけない:
+- 思考プロセス
+- シーン分析
+- 説明文
+- %START% の前に書く文字
+- %END% の後に書く文字
+
+【必須】以下を必ず守ること:
+1. 出力の最初の文字は「%START%」から始める
+2. 詳細な画像生成用プロンプトを英語で書く（800-1500語）
+3. 出力の最後は「%END%」で終わる
+4. それ以外は一切書かない
+
+【正しい出力例】:
+%START%
+Wide establishing shot from elevated angle, high-quality anime style with detailed animation aesthetic capturing 1970s research laboratory...
+%END%
+
+【間違った出力例】（絶対にこうしないこと）:
+まずシーンを分析します。このシーンでは...
+思考プロセス: キャラクターは...
+%START%
+Wide shot...
+%END%
+
+# 【絶対禁止事項 / ABSOLUTELY PROHIBITED】
+- Do NOT create split screens, diptychs, triptychs, multiple panels, or collage-style images.
+- Every image must be a single, unified scene from a single viewpoint.
+
+✅ 構図・演出テクニック
+A. 感情的瞬間の強化
+
+失敗・ミスの瞬間演出
+
+集団反応（一斉振り返り等）
+
+感情の段階的変化（自信→驚愕→絶望）
+
+B. 対比構造の活用
+
+敵対勢力の油断→転落
+
+立場逆転の瞬間
+
+内部緊張 vs 外部評価
+
+C. 空間演出の工夫
+
+閉鎖空間の圧迫感
+
+視線誘導（全員が同一点注視）
+
+動的要素（落下物、人物登場）
+
+D. 時系列演出
+
+Before/After対比
+
+連続動作の段階描写
+
+並行進行シーン
+
+逆説的演出法（新手法）
+
+原理: 禁止事項を「違反の瞬間」で表現する
+
+効果: 暗黙知の可視化、緊張感の創出、リアリティの向上
+
+パターン例:
+
+静寂の重要性 → 音を出してしまった事故の緊張
+
+規律の厳格さ → 違反が発覚した瞬間
+
+秘密保持 → 情報漏洩危機のパニック
+
+応用公式: 「○○してはいけない」→「○○してしまった瞬間の緊張」
+
+✅ 感情表現ルール
+オーバーアクション推奨場面: 怒り・悲しみ・失望・驚き・喜びの感情シーン。特にサムネイルは感情を強調する。
+
+具体的表現例:
+
+驚き → wide eyes, mouth open, dramatic gesture
+
+喜び → tears streaming, hands to heart, overwhelming expression
+
+怒り → fists clenched, pointing aggressively, frustrated expression
+
+失望 → shoulders slumped, hands spread in disbelief
+
+感情シーン例:
+
+「「水だ！しかもこんなに綺麗な水！」」→ Extreme close-up with exaggerated joy expression, eyes wide with wonder, mouth open in loud exclamation, hands dramatically cupping water
+
+✅ 特殊ルール
+エンディングルール:
+
+物語で友好関係になった現地民と主人公の、印象的で心温まる仲良しシーンを必須とする。
+
+例: 水が出た喜びを分かち合う子どもたちと技術者、成功を祝う握手や笑顔の交流シーン。
+
+ものづくり物語の技術描写:
+
+技術的根拠の可視化:
+
+❌ 人物が驚いている表情のみ
+
+⭕ なぜ驚くのかの技術的理由（部品の材質・構造・精密度、数値データ、性能差、比較結果など）を視覚化する。
+
+比較・対比の明確化:
+
+グラフ、チャート、デジタル表示での比較（例：「A社18時間 vs B社21時間37分」）
+
+従来技術 vs 革新技術の対比構造
+
+職人技・精密技術の表現:
+
+0.1mmの精密作業や微細調整の様子
+
+専門工具・計測器具の使用シーン
+
+金メッキ、高純度銅といった材質の質感
+
+✅ 絶対禁止事項
+セリフ・会話文字の絶対禁止:
+
+画像内にセリフや会話の文字を一切入れない。（建物の看板、標識などの環境文字はOK）
+
+セリフがある場面は、その感情や様子を視覚的に表現する。
+
+例: 「許可を取ってこい！」→ pointing finger aggressively, shouting with authority
+
+例: 「ありがとう」→ bowing deeply with gratitude, warm smile
+
+例: 「すごい！」→ eyes wide with amazement, hands raised in excitement
+
+絶対に避けるべき表現:
+
+❌ Asian features, narrow eyes, sharp features, slanted eyes
+
+⭕ typical Japanese facial features, natural Japanese bone structure
+
+国籍混在防止対策:
+
+アメリカ軍単独シーンでは、character_rules.txtで指定されたキーワードを必ずプロンプトに含めること。

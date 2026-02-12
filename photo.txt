@@ -1,0 +1,21 @@
++ Job ai-image-pipeline in region asia-northeast1
+Executed 92 times
+Last executed 2025-12-06T17:59:17.016473Z with execution ai-image-pipeline-wllpp
+Last updated on 2025-11-25T12:30:44.735253Z by keiforworks@gmail.com
+ 
+Tasks:               1
+Parallelism:         No limit
+Container ai-image-pipeline-1
+  Image:             gcr.io/ai-content-pipeline-475505/ai-image-pipeline:latest
+  Memory:            4Gi
+  CPU:               2000m
+  Secrets:
+    /secrets/creds   google-credentials:latest
+    /secrets/token   google-token:latest
+    ANTHROPIC_API_KEY ANTHROPIC_API_KEY:latest
+    DISCORD_GAS_WEBHOOK_URL DISCORD_GAS_WEBHOOK_URL:latest
+    GDRIVE_PARENT_FOLDER_ID GDRIVE_PARENT_FOLDER_ID:latest
+    OPENAI_API_KEY   OPENAI_API_KEY:latest
+Task Timeout:        1d
+Max Retries:         5
+Service account:     185523304631-compute@developer.gserviceaccount.com
