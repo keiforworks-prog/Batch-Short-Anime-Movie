@@ -1,0 +1,27 @@
+# Batch Checker Job 用 Dockerfile
+# 軽量版 - バッチステータス確認のみ
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 必要最小限のパッケージ
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# 依存関係
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir google-cloud-run
+
+# スクリプトをコピー
+COPY scripts/ scripts/
+
+# 環境変数
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONIOENCODING=utf-8
+ENV LANG=C.UTF-8
+
+# Checker Job を実行
+CMD ["python", "scripts/Batch/batch_checker_job.py"]

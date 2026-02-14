@@ -375,7 +375,7 @@ def main():
         logger.log(f"  完了まで最大24時間かかります")
         logger.log(f"{'='*60}")
         
-        # クローラーに登録
+        # クローラーに登録（ローカル）
         try:
             from batch_crawler import register_batch
             register_batch(
@@ -385,12 +385,52 @@ def main():
                 output_dir=output_dir,
                 model_name=model_name
             )
-            logger.log(f"\n🔄 バッチクローラーに登録しました")
+            logger.log(f"\n🔄 ローカルクローラーに登録しました")
             logger.log(f"   クローラーを起動: python batch_crawler.py start")
         except ImportError:
-            logger.log(f"\n⚠️ batch_crawler モジュールが見つかりません")
+            logger.log(f"\n⚠️ batch_crawler モジュールが見つかりません（ローカル）")
         except Exception as e:
-            logger.log(f"\n⚠️ クローラー登録エラー（続行）: {e}")
+            logger.log(f"\n⚠️ ローカルクローラー登録エラー（続行）: {e}")
+        
+        # GCS にも登録（Cloud Run 用）
+        try:
+            from google.cloud import storage
+            import json
+            
+            gcs_bucket = os.environ.get("GCS_BUCKET_NAME")
+            if gcs_bucket:
+                client = storage.Client()
+                bucket = client.bucket(gcs_bucket)
+                blob = bucket.blob("batch_status.json")
+                
+                # 既存の状態を読み込み
+                if blob.exists():
+                    content = blob.download_as_text()
+                    status_data = json.loads(content)
+                else:
+                    status_data = {"projects": {}}
+                
+                # プロジェクトを追加
+                from datetime import datetime
+                status_data["projects"][project_name] = {
+                    "batch_id": batch_id,
+                    "batch_type": "gpt_images",
+                    "status": "in_progress",
+                    "submitted_at": datetime.now().isoformat(),
+                    "output_dir": output_dir,
+                    "model_name": model_name
+                }
+                
+                # 保存
+                blob.upload_from_string(
+                    json.dumps(status_data, ensure_ascii=False, indent=2),
+                    content_type="application/json"
+                )
+                logger.log(f"☁️  GCS (Cloud Run用) に登録しました")
+        except ImportError:
+            logger.log(f"\n⚠️ google-cloud-storage がインストールされていません")
+        except Exception as e:
+            logger.log(f"\n⚠️ GCS 登録エラー（続行）: {e}")
         
         return True
         

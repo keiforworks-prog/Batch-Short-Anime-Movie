@@ -1,0 +1,60 @@
+# Cloud Build 設定 - Batch Checker & Post-flow Jobs
+#
+# 使い方:
+#   gcloud builds submit --config=cloudbuild-batch.yaml
+#
+# 必要な環境変数 (Secret Manager):
+#   - OPENAI_API_KEY
+#   - ANTHROPIC_API_KEY
+#   - MINIMAX_API_KEY
+#   - GDRIVE_PARENT_FOLDER_ID
+
+substitutions:
+  _REGION: asia-northeast1
+  _PROJECT_ID: ${PROJECT_ID}
+
+steps:
+  # 1. Checker Job のイメージをビルド
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/batch-jobs/batch-checker:latest'
+      - '-f'
+      - 'Dockerfile.checker'
+      - '.'
+    id: 'build-checker'
+
+  # 2. Post-flow Job のイメージをビルド
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/batch-jobs/batch-postflow:latest'
+      - '-f'
+      - 'Dockerfile.postflow'
+      - '.'
+    id: 'build-postflow'
+
+  # 3. Checker イメージをプッシュ
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/batch-jobs/batch-checker:latest'
+    id: 'push-checker'
+    waitFor: ['build-checker']
+
+  # 4. Post-flow イメージをプッシュ
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/batch-jobs/batch-postflow:latest'
+    id: 'push-postflow'
+    waitFor: ['build-postflow']
+
+images:
+  - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/batch-jobs/batch-checker:latest'
+  - '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/batch-jobs/batch-postflow:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
