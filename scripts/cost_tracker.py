@@ -24,6 +24,12 @@ class CostTracker:
         "standard": 0.25  # GPT Image 1（高品質）
     }
     
+    # 🆕 動画生成の価格
+    HAILUO_PRICES = {
+        "fast": 0.14,         # MiniMax Hailuo 2.3 Fast (768p, 6sec)
+        "standard": 0.28      # MiniMax Hailuo 2.3 (768p, 6sec)
+    }
+    
     # 🆕 Cloud Run 料金設定
     CLOUD_RUN_PRICES = {
         "cpu": 0.000024,      # $0.000024 per vCPU-second
@@ -44,6 +50,7 @@ class CostTracker:
         self.phase_1_1_cost = 0.0
         self.phase_1_2_cost = 0.0
         self.phase_2_cost = 0.0
+        self.phase_2_5_cost = 0.0   # 🆕 動画生成コスト
         self.cloud_run_cost = 0.0  # 🆕 Cloud Run コスト
         
         # Phase 1.2 詳細
@@ -62,6 +69,11 @@ class CostTracker:
         
         # 🆕 Cloud Run 詳細
         self.cloud_run_duration = 0  # 実行時間（秒）
+        
+        # 🆕 Phase 2.5 詳細（動画生成）
+        self.videos_generated = 0
+        self.videos_failed = 0
+        self.video_model = "fast"  # "fast" or "standard"
     
     def add_phase_1_1(self, api_calls=1):
         """
@@ -140,9 +152,25 @@ class CostTracker:
         
         self.cloud_run_cost = cpu_cost + memory_cost
     
+    def add_phase_2_5(self, videos_generated, videos_failed, model="fast"):
+        """
+        Phase 2.5（動画生成）のコストを記録
+        
+        Args:
+            videos_generated: 生成成功した動画本数
+            videos_failed: 生成失敗した動画本数
+            model: "fast" (Hailuo 2.3 Fast) or "standard" (Hailuo 2.3)
+        """
+        self.videos_generated = videos_generated
+        self.videos_failed = videos_failed
+        self.video_model = model
+        
+        price = self.HAILUO_PRICES.get(model, self.HAILUO_PRICES["fast"])
+        self.phase_2_5_cost = videos_generated * price
+    
     def get_total_cost_usd(self):
         """総コスト（USD）を取得"""
-        return self.phase_1_1_cost + self.phase_1_2_cost + self.phase_2_cost + self.cloud_run_cost
+        return self.phase_1_1_cost + self.phase_1_2_cost + self.phase_2_cost + self.phase_2_5_cost + self.cloud_run_cost
     
     def get_total_cost_jpy(self):
         """総コスト（JPY）を取得"""
@@ -163,6 +191,7 @@ class CostTracker:
         total_jpy = self.get_total_cost_jpy()
         phase_1_usd = self.get_phase_1_cost_usd()
         phase_2_usd = self.phase_2_cost
+        phase_2_5_usd = self.phase_2_5_cost
         cloud_run_usd = self.cloud_run_cost
         
         return {
@@ -170,12 +199,15 @@ class CostTracker:
             "total_jpy": total_jpy,
             "phase_1_usd": round(phase_1_usd, 2),
             "phase_2_usd": round(phase_2_usd, 2),
-            "cloud_run_usd": round(cloud_run_usd, 2),  # 🆕
-            "cloud_run_duration": round(self.cloud_run_duration / 60, 1),  # 🆕 分単位
+            "phase_2_5_usd": round(phase_2_5_usd, 2),
+            "cloud_run_usd": round(cloud_run_usd, 2),
+            "cloud_run_duration": round(self.cloud_run_duration / 60, 1),
             "images_generated": self.images_generated,
             "images_failed": self.images_failed,
-            "images_high_quality": self.images_high_quality,  # 🆕
-            "images_mini": self.images_mini,  # 🆕
+            "images_high_quality": self.images_high_quality,
+            "images_mini": self.images_mini,
+            "videos_generated": self.videos_generated,
+            "videos_failed": self.videos_failed,
             "prompts_count": self.images_generated + self.images_failed
         }
     
@@ -215,6 +247,10 @@ Phase 1.2: ${self.phase_1_2_cost:.2f} (約{int(self.phase_1_2_cost * self.USD_TO
 
 Phase 2: ${self.phase_2_cost:.2f} (約{int(self.phase_2_cost * self.USD_TO_JPY)}円)
 {phase_2_breakdown}
+
+Phase 2.5: ${self.phase_2_5_cost:.2f} (約{int(self.phase_2_5_cost * self.USD_TO_JPY)}円)
+  - 動画生成: {self.videos_generated}本 × ${self.HAILUO_PRICES.get(self.video_model, 0.14):.2f}
+  - 失敗: {self.videos_failed}本
 
 Cloud Run: ${self.cloud_run_cost:.2f} (約{int(self.cloud_run_cost * self.USD_TO_JPY)}円)
   - 実行時間: {self.cloud_run_duration:.0f}秒 ({self.cloud_run_duration/60:.1f}分)

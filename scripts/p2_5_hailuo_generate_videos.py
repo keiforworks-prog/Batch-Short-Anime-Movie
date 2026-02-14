@@ -28,6 +28,7 @@ from config import (
 )
 from project_utils import get_current_project_info
 from logger_utils import DualLogger
+from cost_tracker import CostTracker
 from dotenv import load_dotenv
 
 # .envファイルを明示的に読み込み（scriptsフォルダからの実行対応）
@@ -37,7 +38,7 @@ load_dotenv(os.path.join(_project_root, ".env"))
 load_dotenv()  # カレントディレクトリの.envも読む
 
 # === API設定 ===
-MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
+MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "").strip().replace('\ufeff', '').replace('\r', '').replace('\n', '')
 MINIMAX_BASE_URL = "https://api.minimax.io/v1"
 
 HEADERS = {
@@ -195,6 +196,79 @@ def save_checkpoint(checkpoint_path, checkpoint_data):
         json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
 
 
+def upload_video_to_drive(video_path, project_name, logger):
+    """
+    動画を Google Drive に即座にアップロード
+    
+    Args:
+        video_path: ローカルの動画パス
+        project_name: プロジェクト名
+        logger: ロガー
+    """
+    try:
+        from googleapiclient.http import MediaFileUpload
+        from googleapiclient.discovery import build
+        from gdrive_checkpoint import authenticate_gdrive, find_project_folder_on_drive
+        
+        parent_folder_id = os.environ.get("GDRIVE_PARENT_FOLDER_ID")
+        if not parent_folder_id:
+            return
+        
+        creds = authenticate_gdrive()
+        if not creds:
+            return
+        
+        service = build('drive', 'v3', credentials=creds)
+        
+        # プロジェクトフォルダを検索
+        project_folder_id = find_project_folder_on_drive(service, project_name, parent_folder_id)
+        
+        if not project_folder_id:
+            folder_metadata = {
+                'name': project_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [parent_folder_id]
+            }
+            folder = service.files().create(body=folder_metadata, fields='id').execute()
+            project_folder_id = folder.get('id')
+        
+        # videos フォルダを検索または作成
+        query = f"name='videos' and '{project_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id)').execute()
+        folders = results.get('files', [])
+        
+        if folders:
+            videos_folder_id = folders[0]['id']
+        else:
+            folder_metadata = {
+                'name': 'videos',
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [project_folder_id]
+            }
+            folder = service.files().create(body=folder_metadata, fields='id').execute()
+            videos_folder_id = folder.get('id')
+        
+        # 既存ファイルを検索（上書き対応）
+        filename = os.path.basename(video_path)
+        query = f"name='{filename}' and '{videos_folder_id}' in parents and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id)').execute()
+        existing_files = results.get('files', [])
+        
+        if existing_files:
+            file_id = existing_files[0]['id']
+            media = MediaFileUpload(video_path, mimetype='video/mp4')
+            service.files().update(fileId=file_id, media_body=media).execute()
+        else:
+            file_metadata = {'name': filename, 'parents': [videos_folder_id]}
+            media = MediaFileUpload(video_path, mimetype='video/mp4')
+            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        
+        logger.log(f"  ☁️ Drive にアップロード完了: {filename}")
+    
+    except Exception as e:
+        logger.log(f"  ⚠️ Drive アップロードエラー（続行）: {e}")
+
+
 def main():
     if not MINIMAX_API_KEY:
         print("🚨 MINIMAX_API_KEY が設定されていません")
@@ -214,6 +288,9 @@ def main():
     # ログ設定
     log_file = os.path.join(LOGS_DIR, f"{LOG_PREFIX_ERROR}{project_name}_phase2_5_video.txt")
     logger = DualLogger(log_file)
+    
+    # コストトラッカー初期化
+    tracker = CostTracker(project_name)
 
     # ファイルパス設定
     motion_prompts_path = os.path.join(project_path, "motion_prompts_list.txt")
@@ -341,6 +418,9 @@ def main():
             checkpoint["completed"].append(idx)
             checkpoint["pending_tasks"].pop(str(idx), None)
             save_checkpoint(checkpoint_path, checkpoint)
+            
+            # 即座に Drive にアップロード
+            upload_video_to_drive(output_path, project_name, logger)
 
             generation_log.append({
                 "index": idx,
@@ -368,12 +448,20 @@ def main():
             })
 
     # === 結果サマリー ===
+    # コスト記録
+    video_model_type = "fast" if "Fast" in HAILUO_MODEL else "standard"
+    tracker.add_phase_2_5(
+        videos_generated=success_count,
+        videos_failed=fail_count,
+        model=video_model_type
+    )
+    
     logger.log(f"\n{'=' * 60}")
     logger.log(f"Phase 2.5 完了")
     logger.log(f"  ✅ 成功: {success_count}本")
     logger.log(f"  ❌ 失敗: {fail_count}本")
     logger.log(f"  ♻️  スキップ(既完了): {skip_count}本")
-    logger.log(f"  💰 推定コスト: ${success_count * 0.14:.2f}")
+    logger.log(f"  💰 コスト: ${tracker.phase_2_5_cost:.2f} (約{int(tracker.phase_2_5_cost * tracker.USD_TO_JPY)}円)")
     logger.log(f"{'=' * 60}")
 
     # 生成ログ保存
@@ -386,7 +474,7 @@ def main():
             "success": success_count,
             "failed": fail_count,
             "skipped": skip_count,
-            "estimated_cost_usd": success_count * 0.14,
+            "estimated_cost_usd": tracker.phase_2_5_cost,
             "generated_at": datetime.now().isoformat(),
             "details": generation_log,
         }, f, ensure_ascii=False, indent=2)

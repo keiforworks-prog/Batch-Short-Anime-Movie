@@ -250,9 +250,16 @@ def check_existing_images(image_output_dir, project_name, logger):
             logger.log(f"")
             logger.log(f"{'='*60}")
             logger.log(f"☁️  Google Drive チェックポイント検出!")
-            logger.log(f"✅ {len(existing_images)} 枚の画像が既に生成済みです")
+            logger.log(f"✅ {len(existing_images)} 枚の画像が Drive に存在")
+            logger.log(f"📥 ローカルにダウンロード中...")
             logger.log(f"{'='*60}")
             logger.log(f"")
+            
+            # Drive から画像をローカルにダウンロード
+            downloaded = download_images_from_drive(
+                project_name, parent_folder_id, image_output_dir, drive_images, logger
+            )
+            logger.log(f"✅ {downloaded} 枚をローカルにダウンロードしました")
         else:
             logger.log("📁 最初から生成を開始します。")
         
@@ -262,6 +269,100 @@ def check_existing_images(image_output_dir, project_name, logger):
         logger.log(f"⚠️ Drive チェックポイント確認中にエラー: {e}")
         logger.log("📁 安全のため、最初から生成を開始します。")
         return set()
+
+
+def download_images_from_drive(project_name, parent_folder_id, local_images_dir, image_names, logger):
+    """
+    Google Drive から画像をローカルにダウンロード
+    
+    Args:
+        project_name: プロジェクト名
+        parent_folder_id: 親フォルダID
+        local_images_dir: ローカルの画像保存先ディレクトリ
+        image_names: ダウンロードする画像ファイル名のリスト
+        logger: ロガー
+    
+    Returns:
+        int: ダウンロードした画像数
+    """
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        from googleapiclient.discovery import build
+        import io
+        
+        creds = authenticate_gdrive()
+        if not creds:
+            return 0
+        
+        service = build('drive', 'v3', credentials=creds)
+        
+        # プロジェクトフォルダを検索
+        project_folder_id = find_project_folder_on_drive(service, project_name, parent_folder_id)
+        if not project_folder_id:
+            return 0
+        
+        # images フォルダを検索
+        query = f"name='images' and '{project_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id)').execute()
+        folders = results.get('files', [])
+        
+        if not folders:
+            return 0
+        
+        images_folder_id = folders[0]['id']
+        
+        # 出力ディレクトリを作成
+        os.makedirs(local_images_dir, exist_ok=True)
+        
+        # 画像ファイルを一括取得（IDとファイル名のマッピング）
+        query = f"'{images_folder_id}' in parents and trashed=false"
+        results = service.files().list(
+            q=query, spaces='drive',
+            fields='files(id, name)',
+            pageSize=1000
+        ).execute()
+        drive_files = {f['name']: f['id'] for f in results.get('files', [])}
+        
+        downloaded = 0
+        for name in image_names:
+            local_path = os.path.join(local_images_dir, name)
+            
+            # 既にローカルにある場合はスキップ
+            if os.path.exists(local_path):
+                downloaded += 1
+                continue
+            
+            file_id = drive_files.get(name)
+            if not file_id:
+                continue
+            
+            try:
+                request = service.files().get_media(fileId=file_id)
+                fh = io.BytesIO()
+                downloader = MediaIoBaseDownload(fh, request)
+                
+                done = False
+                while not done:
+                    status, done = downloader.next_chunk()
+                
+                with open(local_path, 'wb') as f:
+                    f.write(fh.getvalue())
+                
+                downloaded += 1
+                
+                # 進捗表示（20枚ごと）
+                if downloaded % 20 == 0:
+                    logger.log(f"  📥 {downloaded}/{len(image_names)} 枚ダウンロード済み")
+            
+            except Exception as e:
+                logger.log(f"  ⚠️ {name} のダウンロードに失敗: {e}")
+                continue
+        
+        return downloaded
+    
+    except Exception as e:
+        logger.log(f"⚠️ Drive からの画像ダウンロードエラー: {e}")
+        return 0
 
 
 def upload_image_to_drive(image_path, project_name, logger):

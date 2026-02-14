@@ -31,6 +31,7 @@ from project_utils import (
 )
 from api_retry_utils import call_api_with_retry
 from cost_tracker import CostTracker
+from gdrive_checkpoint import authenticate_gdrive, find_project_folder_on_drive
 
 # グローバル変数（中断ハンドラ用）
 _logger = None
@@ -57,6 +58,120 @@ def handle_interrupt(signum, frame):
 
 signal.signal(signal.SIGINT, handle_interrupt)
 signal.signal(signal.SIGTERM, handle_interrupt)
+
+
+def download_motion_prompts_from_drive(project_name, output_file_path, logger):
+    """
+    Google Drive から motion_prompts_list.txt をダウンロード
+    
+    Args:
+        project_name: プロジェクト名
+        output_file_path: ローカル保存先のパス
+        logger: ロガー
+    
+    Returns:
+        bool: 成功時 True
+    """
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        from googleapiclient.discovery import build
+        import io
+        
+        parent_folder_id = os.getenv("GDRIVE_PARENT_FOLDER_ID")
+        if not parent_folder_id:
+            return False
+        
+        creds = authenticate_gdrive()
+        if not creds:
+            return False
+        
+        service = build('drive', 'v3', credentials=creds)
+        
+        project_folder_id = find_project_folder_on_drive(service, project_name, parent_folder_id)
+        if not project_folder_id:
+            return False
+        
+        query = f"name='motion_prompts_list.txt' and '{project_folder_id}' in parents and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id)').execute()
+        files = results.get('files', [])
+        
+        if not files:
+            logger.log("📁 Drive に motion_prompts_list.txt が見つかりません。")
+            return False
+        
+        file_id = files[0]['id']
+        request = service.files().get_media(fileId=file_id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+        
+        os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+        with open(output_file_path, 'wb') as f:
+            f.write(fh.getvalue())
+        
+        logger.log(f"☁️  Drive から motion_prompts_list.txt をダウンロードしました")
+        return True
+    
+    except Exception as e:
+        logger.log(f"⚠️ Drive ダウンロードエラー: {e}")
+        return False
+
+
+def upload_motion_prompts_to_drive(motion_file_path, project_name, logger):
+    """
+    motion_prompts_list.txt を Google Drive にアップロード
+    
+    Args:
+        motion_file_path: ローカルの motion_prompts_list.txt のパス
+        project_name: プロジェクト名
+        logger: ロガー
+    """
+    try:
+        from googleapiclient.http import MediaFileUpload
+        from googleapiclient.discovery import build
+        
+        parent_folder_id = os.getenv("GDRIVE_PARENT_FOLDER_ID")
+        if not parent_folder_id:
+            return
+        
+        creds = authenticate_gdrive()
+        if not creds:
+            return
+        
+        service = build('drive', 'v3', credentials=creds)
+        
+        project_folder_id = find_project_folder_on_drive(service, project_name, parent_folder_id)
+        
+        if not project_folder_id:
+            folder_metadata = {
+                'name': project_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [parent_folder_id]
+            }
+            folder = service.files().create(body=folder_metadata, fields='id').execute()
+            project_folder_id = folder.get('id')
+        
+        # 既存ファイルを検索
+        query = f"name='motion_prompts_list.txt' and '{project_folder_id}' in parents and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id)').execute()
+        existing_files = results.get('files', [])
+        
+        if existing_files:
+            file_id = existing_files[0]['id']
+            media = MediaFileUpload(motion_file_path, mimetype='text/plain')
+            service.files().update(fileId=file_id, media_body=media).execute()
+            logger.log(f"☁️  motion_prompts_list.txt を Drive で更新しました")
+        else:
+            file_metadata = {'name': 'motion_prompts_list.txt', 'parents': [project_folder_id]}
+            media = MediaFileUpload(motion_file_path, mimetype='text/plain')
+            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            logger.log(f"☁️  motion_prompts_list.txt を Drive に保存しました")
+    
+    except Exception as e:
+        logger.log(f"⚠️ Drive 保存エラー（続行します）: {e}")
 
 
 def load_image_prompts(jsonl_file, logger):
@@ -416,6 +531,11 @@ def generate_motion_prompts(
                         _success_count = success_count
                         parse_success = True
                         
+                        # 10個ごとにDriveへバックアップ
+                        if success_count % 10 == 0:
+                            upload_motion_prompts_to_drive(output_file, _project_name, logger)
+                            logger.log(f"☁️ Drive に保存しました")
+                        
                         logger.log(f"✅ モーション {prompt_index}/{total} 完了")
                         break
                     
@@ -540,8 +660,16 @@ def main():
             
             _total_count = len(image_prompts)
             
-            # チェックポイント確認
+            # チェックポイント確認（ローカル → Drive）
             completed = check_existing_motion_prompts(output_file, logger)
+            
+            if completed == 0:
+                # Driveから取得を試みる
+                logger.log("📁 ローカルにモーションプロンプトが見つかりません。")
+                logger.log("☁️  Google Drive からチェックポイントを確認中...")
+                
+                if download_motion_prompts_from_drive(project_name, output_file, logger):
+                    completed = check_existing_motion_prompts(output_file, logger)
             
             if completed > 0:
                 logger.log(f"\n🔄 チェックポイント: {completed}/{_total_count} 完了済み")
@@ -563,9 +691,16 @@ def main():
                     output_file, logger, completed_count=completed, tracker=tracker
                 ):
                     logger.log(f"\n✅ モーションプロンプトを保存しました: {output_file}")
+                    
+                    # 最終的にDriveへアップロード
+                    upload_motion_prompts_to_drive(output_file, project_name, logger)
+                    
                     logger.log("--- Phase 1.3 (Motion Prompts) が正常に完了しました ---")
                 else:
                     logger.log("🚨 一部のモーションプロンプト生成に失敗しましたが、処理を続行します。")
+                    
+                    # 部分的でもDriveへアップロード
+                    upload_motion_prompts_to_drive(output_file, project_name, logger)
     
     except Exception as e:
         logger.log(f"\n🚨🚨🚨 Phase 1.3 で予期せぬエラーが発生しました 🚨🚨🚨")

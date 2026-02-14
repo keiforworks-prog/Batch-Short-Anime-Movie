@@ -17,8 +17,6 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from cost_tracker import CostTracker
 import cost_tracker
-print(f"🔍 cost_tracker のパス: {cost_tracker.__file__}")
-print(f"🔍 GPT_IMAGE_PRICES: {CostTracker.GPT_IMAGE_PRICES}")
 
 
 # 共通モジュールのインポート

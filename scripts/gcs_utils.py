@@ -7,7 +7,7 @@ from config import PROJECT_ROOT
 
 # GCS設定
 GCS_BUCKET_NAME = "ai-image-pipeline-scripts"
-GCS_INPUT_FOLDER = "input/"
+GCS_INPUT_FOLDER = os.environ.get("GCS_INPUT_FOLDER", "input-short/")
 
 def get_gcs_client():
     """GCS クライアントを取得"""

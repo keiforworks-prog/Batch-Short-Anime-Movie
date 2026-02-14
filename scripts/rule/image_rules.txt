@@ -33,6 +33,16 @@ Wide shot...
 - Do NOT create split screens, diptychs, triptychs, multiple panels, or collage-style images.
 - Every image must be a single, unified scene from a single viewpoint.
 
+# 【抽象・イメージ表現の禁止 / NO ABSTRACT OR SYMBOLIC IMAGERY】
+- Do NOT create fantasy-like, metaphorical, or symbolic imagery (e.g., glowing auras, energy beams, magical effects connecting people, abstract light particles).
+- Every scene must depict a REALISTIC, physically possible moment that could actually happen in real life.
+- For emotional or conceptual narration (e.g., "kindness spread across the world"), translate it into a concrete, grounded scene:
+  - ❌ People with glowing halos or energy effects linking them together
+  - ⭕ People of different ethnicities shaking hands warmly, a crowd helping someone up, neighbors sharing food
+- For abstract concepts (e.g., "hope was born", "the world changed"), show the HUMAN ACTION that represents it:
+  - ❌ Symbolic light rays, cosmic imagery, metaphorical visuals
+  - ⭕ A child smiling while receiving help, workers celebrating a completed project, a family reuniting
+
 ✅ 構図・演出テクニック
 A. 感情的瞬間の強化
 

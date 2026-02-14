@@ -301,10 +301,11 @@ def process_single_project(script_filename, is_gcs):
         return False
     
     # Phase 2.5: 動画生成 (Hailuo)
-    if not run_phase_script(PHASE2_5_SCRIPT, "Phase 2.5 (Video Generation)"):
-        return False
+    phase2_5_success = run_phase_script(PHASE2_5_SCRIPT, "Phase 2.5 (Video Generation)")
+    if not phase2_5_success:
+        print("⚠️ Phase 2.5 に失敗しましたが、アップロードは続行します")
     
-    # Phase 3: Google Drive アップロード
+    # Phase 3: Google Drive アップロード（常に実行）
     if not run_phase_script(PHASE3_SCRIPT, "Phase 3 (Google Drive Upload)"):
         return False
     
