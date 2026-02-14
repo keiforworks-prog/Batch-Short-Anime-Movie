@@ -229,3 +229,188 @@ def check_drive_checkpoint(project_name, parent_folder_id, checkpoint_type="prom
         print(f"⚠️ Drive チェックポイント取得中にエラー: {e}")
         print("📁 安全のため、最初から生成します。")
         return 0 if checkpoint_type == "prompts" else []
+
+
+def download_images_from_drive(project_name, local_images_dir, logger=None):
+    """
+    Google Drive から画像をローカルにダウンロード
+    Cloud Run など揮発性環境でP2.5を実行する際に使用
+    
+    Args:
+        project_name: プロジェクト名
+        local_images_dir: ローカルの画像保存先ディレクトリ
+        logger: ロガー（オプション）
+    
+    Returns:
+        int: ダウンロードした画像数
+    """
+    def log(msg):
+        if logger:
+            logger.log(msg)
+        else:
+            print(msg)
+    
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        import io
+        
+        parent_folder_id = os.environ.get("GDRIVE_PARENT_FOLDER_ID")
+        if not parent_folder_id:
+            log("⚠️ GDRIVE_PARENT_FOLDER_ID が設定されていません")
+            return 0
+        
+        creds = authenticate_gdrive()
+        if not creds:
+            log("⚠️ Drive 認証に失敗しました")
+            return 0
+        
+        service = build('drive', 'v3', credentials=creds)
+        
+        # プロジェクトフォルダを検索
+        project_folder_id = find_project_folder_on_drive(service, project_name, parent_folder_id)
+        if not project_folder_id:
+            log(f"⚠️ Drive にプロジェクト '{project_name}' が見つかりません")
+            return 0
+        
+        # images フォルダを検索
+        query = f"name='images' and '{project_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id)').execute()
+        folders = results.get('files', [])
+        
+        if not folders:
+            log("⚠️ Drive に images フォルダが見つかりません")
+            return 0
+        
+        images_folder_id = folders[0]['id']
+        
+        # 画像ファイル一覧を取得
+        query = f"'{images_folder_id}' in parents and trashed=false"
+        results = service.files().list(
+            q=query, spaces='drive',
+            fields='files(id, name)',
+            pageSize=1000
+        ).execute()
+        drive_files = results.get('files', [])
+        
+        if not drive_files:
+            log("⚠️ Drive に画像ファイルがありません")
+            return 0
+        
+        # ローカルディレクトリを作成
+        os.makedirs(local_images_dir, exist_ok=True)
+        
+        log(f"☁️  Drive から {len(drive_files)} 枚の画像をダウンロード中...")
+        
+        downloaded = 0
+        for file_info in drive_files:
+            file_id = file_info['id']
+            filename = file_info['name']
+            
+            # PNG ファイルのみ
+            if not filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                continue
+            
+            local_path = os.path.join(local_images_dir, filename)
+            
+            # 既にローカルにある場合はスキップ
+            if os.path.exists(local_path):
+                downloaded += 1
+                continue
+            
+            try:
+                request = service.files().get_media(fileId=file_id)
+                fh = io.BytesIO()
+                downloader = MediaIoBaseDownload(fh, request)
+                
+                done = False
+                while not done:
+                    status, done = downloader.next_chunk()
+                
+                with open(local_path, 'wb') as f:
+                    f.write(fh.getvalue())
+                
+                downloaded += 1
+                
+                # 進捗表示（20枚ごと）
+                if downloaded % 20 == 0:
+                    log(f"  📥 {downloaded}/{len(drive_files)} 枚ダウンロード済み")
+            
+            except Exception as e:
+                log(f"  ⚠️ {filename} のダウンロードに失敗: {e}")
+                continue
+        
+        log(f"✅ {downloaded} 枚の画像をダウンロードしました")
+        return downloaded
+    
+    except Exception as e:
+        log(f"⚠️ Drive からの画像ダウンロードエラー: {e}")
+        return 0
+
+
+def download_motion_prompts_from_drive(project_name, local_path, logger=None):
+    """
+    Google Drive から motion_prompts_list.txt をダウンロード
+    
+    Args:
+        project_name: プロジェクト名
+        local_path: ローカルの保存先パス
+        logger: ロガー（オプション）
+    
+    Returns:
+        bool: 成功時 True
+    """
+    def log(msg):
+        if logger:
+            logger.log(msg)
+        else:
+            print(msg)
+    
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        import io
+        
+        parent_folder_id = os.environ.get("GDRIVE_PARENT_FOLDER_ID")
+        if not parent_folder_id:
+            return False
+        
+        creds = authenticate_gdrive()
+        if not creds:
+            return False
+        
+        service = build('drive', 'v3', credentials=creds)
+        
+        # プロジェクトフォルダを検索
+        project_folder_id = find_project_folder_on_drive(service, project_name, parent_folder_id)
+        if not project_folder_id:
+            return False
+        
+        # motion_prompts_list.txt を検索
+        query = f"name='motion_prompts_list.txt' and '{project_folder_id}' in parents and trashed=false"
+        results = service.files().list(q=query, spaces='drive', fields='files(id)').execute()
+        files = results.get('files', [])
+        
+        if not files:
+            log("⚠️ Drive に motion_prompts_list.txt が見つかりません")
+            return False
+        
+        # ダウンロード
+        file_id = files[0]['id']
+        request = service.files().get_media(fileId=file_id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+        
+        # ローカルに保存
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        with open(local_path, 'wb') as f:
+            f.write(fh.getvalue())
+        
+        log(f"☁️  Drive から motion_prompts_list.txt をダウンロードしました")
+        return True
+    
+    except Exception as e:
+        log(f"⚠️ motion_prompts_list.txt のダウンロードエラー: {e}")
+        return False

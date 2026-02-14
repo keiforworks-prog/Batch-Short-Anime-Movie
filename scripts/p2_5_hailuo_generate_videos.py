@@ -299,14 +299,33 @@ def main():
     checkpoint_path = os.path.join(project_path, "video_checkpoint.json")
     log_path = os.path.join(project_path, "video_generation_log.json")
 
-    # 入力ファイル確認
+    # === Cloud Run 対応: ローカルにファイルがなければ Drive からダウンロード ===
+    from gdrive_checkpoint import download_images_from_drive, download_motion_prompts_from_drive
+    
+    # motion_prompts_list.txt の確認とダウンロード
     if not os.path.exists(motion_prompts_path):
-        logger.log(f"モーションプロンプトが見つかりません: {motion_prompts_path}")
-        sys.exit(1)
-
-    if not os.path.exists(images_dir):
-        logger.log(f"画像フォルダが見つかりません: {images_dir}")
-        sys.exit(1)
+        logger.log(f"📁 ローカルに motion_prompts_list.txt がありません")
+        logger.log(f"☁️  Google Drive からダウンロードを試みます...")
+        
+        if not download_motion_prompts_from_drive(project_name, motion_prompts_path, logger):
+            logger.log(f"🚨 motion_prompts_list.txt が見つかりません（ローカルにもDriveにもない）")
+            sys.exit(1)
+    
+    # images フォルダの確認とダウンロード
+    images_exist = os.path.exists(images_dir) and len(os.listdir(images_dir)) > 0
+    
+    if not images_exist:
+        logger.log(f"📁 ローカルに画像がありません")
+        logger.log(f"☁️  Google Drive からダウンロードを試みます...")
+        
+        os.makedirs(images_dir, exist_ok=True)
+        downloaded = download_images_from_drive(project_name, images_dir, logger)
+        
+        if downloaded == 0:
+            logger.log(f"🚨 画像が見つかりません（ローカルにもDriveにもない）")
+            sys.exit(1)
+        
+        logger.log(f"✅ {downloaded} 枚の画像をダウンロードしました")
 
     # モーションプロンプト読み込み
     with open(motion_prompts_path, "r", encoding="utf-8") as f:
