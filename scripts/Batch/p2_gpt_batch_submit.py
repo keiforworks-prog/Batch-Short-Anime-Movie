@@ -375,6 +375,23 @@ def main():
         logger.log(f"  完了まで最大24時間かかります")
         logger.log(f"{'='*60}")
         
+        # クローラーに登録
+        try:
+            from batch_crawler import register_batch
+            register_batch(
+                project_name=project_name,
+                batch_id=batch_id,
+                batch_type="gpt_images",
+                output_dir=output_dir,
+                model_name=model_name
+            )
+            logger.log(f"\n🔄 バッチクローラーに登録しました")
+            logger.log(f"   クローラーを起動: python batch_crawler.py start")
+        except ImportError:
+            logger.log(f"\n⚠️ batch_crawler モジュールが見つかりません")
+        except Exception as e:
+            logger.log(f"\n⚠️ クローラー登録エラー（続行）: {e}")
+        
         return True
         
     except Exception as e:
