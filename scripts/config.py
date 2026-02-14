@@ -39,7 +39,7 @@ if USE_HIGH_QUALITY:
 else:
     GPT_IMAGE_MODEL = "gpt-image-1-mini"
 
-IMAGE_SIZE = "1536x1024"  # 横長（ロング用）
+IMAGE_SIZE = "1024x1536"
 IMAGE_QUALITY = "high"
 
 # --- Phase 1.3: モーションプロンプト設定 ---
